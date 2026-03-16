@@ -1,12 +1,16 @@
 # Project Working Rules
 
+#
+
 ## Backend Ownership
+
 - Next.js is the only application runtime.
 - Supabase is used only as PostgreSQL infrastructure.
 - Do not add business logic to Supabase functions, triggers, or auth flows.
 - Prefer Route Handlers, Server Components, and Server Actions in Next.js.
 
 ## Auth Standard
+
 - Authentication is server-owned.
 - The source of truth for auth is the server session, never Redux or localStorage.
 - Use exactly one session cookie: `mc_session`.
@@ -16,11 +20,13 @@
 - Client state may mirror auth for UI rendering, but must never become authoritative.
 
 ## Dev Admin
+
 - Technical auth tooling lives under `/dev`.
 - Dev admin access must be protected by environment credentials and its own server cookie flow.
 - Dev tooling may manage auth test data, but must not become the production auth path.
 
 ## Session Lifecycle
+
 - Use opaque random session tokens.
 - Store only the token hash in the database.
 - Invalidate prior active sessions on new login unless requirements explicitly change.
@@ -28,11 +34,13 @@
 - Throttle session touch writes to avoid unnecessary latency and database churn.
 
 ## Data Access
+
 - Use Prisma through `src/lib/prisma.ts`.
 - Keep auth identity/credentials/session tables separated from domain profile data.
 - Prefer small server utilities with clear names over large generic abstractions.
 
 ## Architecture Contracts
+
 - This typing strategy is the default and should be reused for all new implementations unless the project architecture changes substantially.
 - Canonical source of shared primitives: `src/types/system.ts`.
 - Canonical source of domain types, unions, and runtime guards: `src/types/index.ts`.
@@ -55,6 +63,7 @@
 - If an AI or developer is unsure where the rule is implemented, inspect these files first: `src/types/system.ts`, `src/types/index.ts`, `src/lib/auth/session.ts`, `src/lib/prisma.ts`, `src/lib/demo/factories.ts`.
 
 ## Type System
+
 - `strict` and `noImplicitAny` are mandatory and must stay enabled.
 - Do not introduce `any`, `as any`, or cast-driven escapes to silence the compiler.
 - Reuse shared utility types from `src/types/system.ts` via `src/types/index.ts`.
@@ -70,15 +79,18 @@
 - If a reusable type pattern appears twice, promote it to `src/types/system.ts`.
 
 ## Frontend Alignment
+
 - Client components should consume hydrated auth state from `src/components/ui/AuthProvider.tsx`, not create it.
 - Redirect and role enforcement belong on the server first, UI second.
 - Avoid duplicated auth logic across pages and layouts.
 
 ## Version Discipline
+
 - Never assume package versions.
 - Read `package.json` and validate compatibility before changing framework-specific syntax or APIs.
 
 ## Current Project Snapshot
+
 - `src/app`
   - App Router entrypoints only: routes, layouts, loading boundaries, and API handlers.
   - Authenticated app sections now live under `src/app/(authenticated)` so the shell and route loading stay shared without changing public URLs.
@@ -97,6 +109,7 @@
   - Keep drafts and per-screen interaction state local to the screen.
 
 ## Current Frontend Rules
+
 - Canonical architecture guide: `docs/frontend-architecture.md`
 - Canonical routing guide: `docs/frontend-routing.md`
 - Canonical loading/pending UX guide: `docs/loading-pattern.md`
@@ -117,6 +130,7 @@
 - For immediate navigation with no desired pending feedback, prefer plain `Link` outside persistent navigation surfaces, or `TrackedLink` with `trackNavigation={false}` when that primitive is required by the surface.
 
 ## Current Product State
+
 - Auth is real and server-owned through Prisma.
 - Login normal y login dev ahora usan server actions con redirect server-owned.
 - La lectura de sesion en render es read-only; la mutacion de sesion vive en route handlers o server actions.
@@ -152,6 +166,7 @@
   - execution detail
 
 ## Current Tooling Gates
+
 - Use these as the current non-interactive gates:
   - `npm run verify`
   - `npm run verify:full`
@@ -182,6 +197,7 @@
   - if no `.git` directory exists yet, the installer leaves the hook files ready and exits without failing
 
 ## Current Prisma And Env Workflow
+
 - Prisma CLI is aligned through `prisma.config.ts`.
 - Prisma Migrate is now the preferred path for structural schema changes.
 - Existing schema state is baselined in `prisma/migrations`.
@@ -197,6 +213,7 @@
 - Do not silently introduce a second active env source without updating this file and the docs.
 
 ## Current Auth Runtime Notes
+
 - `getCurrentSession()` es la lectura segura para render/layouts/server components.
 - `getCurrentSessionWithRefresh()` es la variante mutable para route handlers cuando se necesita tocar idle expiry y limpiar cookies invalidas.
 - `getInitialAuthState()` arma el snapshot server->client para `AuthProvider`.
@@ -204,6 +221,7 @@
 - `/api/auth/session` es el endpoint mutable de session touch para el shell autenticado.
 
 ## Current Guardrails
+
 - `tests/app-views.test.ts` enforces:
   - route template alignment with `src/app`
   - route group folders do not drift the audited public URL contract
@@ -221,6 +239,7 @@
   - `tests/app-views.test.ts`
 
 ## Agent Working Pattern
+
 - Always read `AGENTS.md` before starting an implementation.
 - Always re-read `AGENTS.md` after finishing an implementation.
 - If the implementation changed structure, workflow, guardrails, tooling, or the recommended working pattern:
