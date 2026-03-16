@@ -1,0 +1,6 @@
+.next
+.test-dist
+build
+coverage
+node_modules
+out

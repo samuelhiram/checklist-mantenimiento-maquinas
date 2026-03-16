@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2022",
+    "isolatedModules": false
+  },
+  "include": [
+    "src/features/navigation/routes.ts",
+    "src/features/navigation/views.ts",
+    "src/lib/auth/authorization.ts",
+    "src/lib/auth/permission-profiles.ts",
+    "src/types/**/*.ts",
+    "tests/**/*.ts"
+  ]
+}

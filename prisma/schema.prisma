@@ -1,0 +1,442 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  schemas    = ["public"]
+  extensions = [uuidOssp(map: "uuid-ossp"), pgcrypto]
+}
+
+enum UserRole {
+  operator
+  supervisor
+  admin
+
+  @@schema("public")
+}
+
+enum MachineStatus {
+  active
+  inactive
+  maintenance
+  decommissioned
+
+  @@schema("public")
+}
+
+enum ChecklistStatus {
+  draft
+  active
+  archived
+
+  @@schema("public")
+}
+
+enum ExecutionStatus {
+  pending
+  in_progress
+  completed
+  failed
+  cancelled
+
+  @@schema("public")
+}
+
+enum ItemType {
+  check
+  measure
+  photo
+  text
+  number
+  select
+
+  @@schema("public")
+}
+
+enum PriorityLevel {
+  low
+  medium
+  high
+  critical
+
+  @@schema("public")
+}
+
+enum FrequencyType {
+  manual
+  daily
+  weekly
+  monthly
+  custom
+
+  @@schema("public")
+}
+
+enum AuthUserStatus {
+  active
+  disabled
+  locked
+
+  @@schema("public")
+}
+
+model Permission {
+  id                 String                        @id @db.Text
+  name               String                        @unique @db.Text
+  description        String                        @db.Text
+  createdAt          DateTime?                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime?                     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  profilePermissions PermissionProfilePermission[]
+
+  @@map("permissions")
+  @@schema("public")
+}
+
+model PermissionProfile {
+  id          String                        @id @db.Text
+  name        String                        @unique @db.Text
+  description String                        @db.Text
+  isSystem    Boolean?                      @default(true) @map("is_system")
+  createdAt   DateTime?                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime?                     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  profiles    Profile[]
+  permissions PermissionProfilePermission[]
+
+  @@map("permission_profiles")
+  @@schema("public")
+}
+
+model PermissionProfilePermission {
+  profileId         String            @map("profile_id") @db.Text
+  permissionId      String            @map("permission_id") @db.Text
+  createdAt         DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  permissionProfile PermissionProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  permission        Permission        @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, permissionId])
+  @@index([permissionId], map: "idx_profile_permissions_permission")
+  @@map("permission_profile_permissions")
+  @@schema("public")
+}
+
+model Organization {
+  id         String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name       String      @db.Text
+  slug       String      @unique @db.Text
+  logoUrl    String?     @map("logo_url") @db.Text
+  plan       String      @default("free") @db.Text
+  settings   Json        @default("{}")
+  createdAt  DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime?   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  profiles   Profile[]
+  locations  Location[]
+  machines   Machine[]
+  checklists Checklist[]
+  executions Execution[]
+  findings   Finding[]
+  auditLogs  AuditLog[]
+
+  @@map("organizations")
+  @@schema("public")
+}
+
+model Profile {
+  id                  String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId               String?            @map("org_id") @db.Uuid
+  permissionProfileId String?            @map("permission_profile_id") @db.Text
+  fullName            String?            @map("full_name") @db.Text
+  avatarUrl           String?            @map("avatar_url") @db.Text
+  role                UserRole?          @default(operator)
+  department          String?            @db.Text
+  badgeNumber         String?            @map("badge_number") @db.Text
+  isActive            Boolean?           @default(true) @map("is_active")
+  lastSeenAt          DateTime?          @map("last_seen_at") @db.Timestamptz(6)
+  createdAt           DateTime?          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime?          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization        Organization?      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  permissionProfile   PermissionProfile? @relation(fields: [permissionProfileId], references: [id])
+  createdMachines     Machine[]          @relation("MachineCreatedBy")
+  createdChecklists   Checklist[]        @relation("ChecklistCreatedBy")
+  updatedChecklists   Checklist[]        @relation("ChecklistUpdatedBy")
+  assignedExecutions  Execution[]        @relation("ExecutionAssignedTo")
+  executedExecutions  Execution[]        @relation("ExecutionExecutedBy")
+  reviewedExecutions  Execution[]        @relation("ExecutionReviewedBy")
+  recordedResults     ExecutionResult[]  @relation("ExecutionResultRecordedBy")
+  reportedFindings    Finding[]          @relation("FindingReportedBy")
+  assignedFindings    Finding[]          @relation("FindingAssignedTo")
+  auditLogs           AuditLog[]         @relation("AuditLogUser")
+  authIdentity        AuthIdentity?
+
+  @@index([orgId], map: "idx_profiles_org")
+  @@index([permissionProfileId], map: "idx_profiles_permission_profile")
+  @@map("profiles")
+  @@schema("public")
+}
+
+model AuthIdentity {
+  id                String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  profileId         String         @unique @map("profile_id") @db.Uuid
+  email             String         @unique @db.Text
+  passwordHash      String         @map("password_hash") @db.Text
+  status            AuthUserStatus @default(active)
+  failedAttempts    Int            @default(0) @map("failed_attempts")
+  lockedUntil       DateTime?      @map("locked_until") @db.Timestamptz(6)
+  lastLoginAt       DateTime?      @map("last_login_at") @db.Timestamptz(6)
+  passwordUpdatedAt DateTime?      @map("password_updated_at") @db.Timestamptz(6)
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  profile           Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  sessions          AuthSession[]
+
+  @@index([email, status], map: "idx_auth_identities_email_status")
+  @@map("auth_identities")
+  @@schema("public")
+}
+
+model AuthSession {
+  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  identityId          String               @map("identity_id") @db.Uuid
+  sessionTokenHash    String               @unique @map("session_token_hash") @db.Text
+  expiresAt           DateTime             @map("expires_at") @db.Timestamptz(6)
+  idleExpiresAt       DateTime             @map("idle_expires_at") @db.Timestamptz(6)
+  lastSeenAt          DateTime             @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  userAgent           String?              @map("user_agent") @db.Text
+  ipAddress           Unsupported("inet")? @map("ip_address")
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt           DateTime?            @map("revoked_at") @db.Timestamptz(6)
+  replacedBySessionId String?              @unique @map("replaced_by_session_id") @db.Uuid
+  identity            AuthIdentity         @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  replacedBySession   AuthSession?         @relation("AuthSessionReplacement", fields: [replacedBySessionId], references: [id])
+  previousSession     AuthSession?         @relation("AuthSessionReplacement")
+
+  @@index([identityId, expiresAt], map: "idx_auth_sessions_identity_expiry")
+  @@index([idleExpiresAt], map: "idx_auth_sessions_idle_expiry")
+  @@map("auth_sessions")
+  @@schema("public")
+}
+
+model Location {
+  id           String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId        String       @map("org_id") @db.Uuid
+  name         String       @db.Text
+  code         String?      @db.Text
+  parentId     String?      @map("parent_id") @db.Uuid
+  description  String?      @db.Text
+  createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamptz(6)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent       Location?    @relation("LocationToLocation", fields: [parentId], references: [id])
+  children     Location[]   @relation("LocationToLocation")
+  machines     Machine[]
+
+  @@map("locations")
+  @@schema("public")
+}
+
+model Machine {
+  id            String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId         String         @map("org_id") @db.Uuid
+  locationId    String?        @map("location_id") @db.Uuid
+  name          String         @db.Text
+  code          String?        @db.Text
+  type          String?        @db.Text
+  manufacturer  String?        @db.Text
+  model         String?        @db.Text
+  serialNumber  String?        @map("serial_number") @db.Text
+  status        MachineStatus? @default(active)
+  priority      PriorityLevel? @default(medium)
+  imageUrl      String?        @map("image_url") @db.Text
+  description   String?        @db.Text
+  specs         Json?          @default("{}")
+  tags          String[]       @default([])
+  createdBy     String?        @map("created_by") @db.Uuid
+  createdAt     DateTime?      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization  Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  location      Location?      @relation(fields: [locationId], references: [id])
+  createdByUser Profile?       @relation("MachineCreatedBy", fields: [createdBy], references: [id])
+  checklists    Checklist[]
+  executions    Execution[]
+  findings      Finding[]
+
+  @@index([orgId], map: "idx_machines_org")
+  @@index([status], map: "idx_machines_status")
+  @@map("machines")
+  @@schema("public")
+}
+
+model Checklist {
+  id            String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId         String           @map("org_id") @db.Uuid
+  machineId     String           @map("machine_id") @db.Uuid
+  name          String           @db.Text
+  description   String?          @db.Text
+  version       Int?             @default(1)
+  status        ChecklistStatus? @default(draft)
+  priority      PriorityLevel?   @default(medium)
+  frequency     FrequencyType?   @default(manual)
+  frequencyCron String?          @map("frequency_cron") @db.Text
+  estimatedMin  Int?             @default(15) @map("estimated_min")
+  requiredRole  UserRole?        @default(operator) @map("required_role")
+  instructions  String?          @db.Text
+  tags          String[]         @default([])
+  isTemplate    Boolean?         @default(false) @map("is_template")
+  createdBy     String?          @map("created_by") @db.Uuid
+  updatedBy     String?          @map("updated_by") @db.Uuid
+  createdAt     DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization  Organization     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  machine       Machine          @relation(fields: [machineId], references: [id], onDelete: Cascade)
+  createdByUser Profile?         @relation("ChecklistCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser Profile?         @relation("ChecklistUpdatedBy", fields: [updatedBy], references: [id])
+  items         ChecklistItem[]
+  executions    Execution[]
+
+  @@index([machineId], map: "idx_checklists_machine")
+  @@index([status], map: "idx_checklists_status")
+  @@map("checklists")
+  @@schema("public")
+}
+
+model ChecklistItem {
+  id             String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  checklistId    String            @map("checklist_id") @db.Uuid
+  parentId       String?           @map("parent_id") @db.Uuid
+  position       Int               @default(0)
+  itemType       ItemType?         @default(check) @map("item_type")
+  title          String            @db.Text
+  description    String?           @db.Text
+  isRequired     Boolean?          @default(true) @map("is_required")
+  isCritical     Boolean?          @default(false) @map("is_critical")
+  unit           String?           @db.Text
+  minValue       Decimal?          @map("min_value") @db.Decimal
+  maxValue       Decimal?          @map("max_value") @db.Decimal
+  targetValue    Decimal?          @map("target_value") @db.Decimal
+  options        String[]          @default([])
+  photoRequired  Boolean?          @default(false) @map("photo_required")
+  helpText       String?           @map("help_text") @db.Text
+  referenceImage String?           @map("reference_image") @db.Text
+  createdAt      DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime?         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  checklist      Checklist         @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  parent         ChecklistItem?    @relation("ChecklistItemToChecklistItem", fields: [parentId], references: [id])
+  children       ChecklistItem[]   @relation("ChecklistItemToChecklistItem")
+  results        ExecutionResult[]
+  findings       Finding[]
+
+  @@index([checklistId, position], map: "idx_items_checklist")
+  @@map("checklist_items")
+  @@schema("public")
+}
+
+model Execution {
+  id             String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId          String            @map("org_id") @db.Uuid
+  checklistId    String            @map("checklist_id") @db.Uuid
+  machineId      String            @map("machine_id") @db.Uuid
+  assignedTo     String?           @map("assigned_to") @db.Uuid
+  executedBy     String?           @map("executed_by") @db.Uuid
+  reviewedBy     String?           @map("reviewed_by") @db.Uuid
+  status         ExecutionStatus?  @default(pending)
+  priority       PriorityLevel?    @default(medium)
+  scheduledAt    DateTime?         @map("scheduled_at") @db.Timestamptz(6)
+  startedAt      DateTime?         @map("started_at") @db.Timestamptz(6)
+  completedAt    DateTime?         @map("completed_at") @db.Timestamptz(6)
+  dueAt          DateTime?         @map("due_at") @db.Timestamptz(6)
+  score          Decimal?          @db.Decimal
+  notes          String?           @db.Text
+  metadata       Json?             @default("{}")
+  createdAt      DateTime?         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime?         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  checklist      Checklist         @relation(fields: [checklistId], references: [id])
+  machine        Machine           @relation(fields: [machineId], references: [id])
+  assignedToUser Profile?          @relation("ExecutionAssignedTo", fields: [assignedTo], references: [id])
+  executedByUser Profile?          @relation("ExecutionExecutedBy", fields: [executedBy], references: [id])
+  reviewedByUser Profile?          @relation("ExecutionReviewedBy", fields: [reviewedBy], references: [id])
+  results        ExecutionResult[]
+  findings       Finding[]
+
+  @@index([orgId], map: "idx_executions_org")
+  @@index([machineId], map: "idx_executions_machine")
+  @@index([status], map: "idx_executions_status")
+  @@index([assignedTo], map: "idx_executions_assigned")
+  @@map("executions")
+  @@schema("public")
+}
+
+model ExecutionResult {
+  id             String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  executionId    String        @map("execution_id") @db.Uuid
+  itemId         String        @map("item_id") @db.Uuid
+  isChecked      Boolean?      @map("is_checked")
+  valueText      String?       @map("value_text") @db.Text
+  valueNumber    Decimal?      @map("value_number") @db.Decimal
+  valueSelect    String?       @map("value_select") @db.Text
+  photoUrl       String?       @map("photo_url") @db.Text
+  isOk           Boolean?      @map("is_ok")
+  isNa           Boolean?      @default(false) @map("is_na")
+  comment        String?       @db.Text
+  flagged        Boolean?      @default(false)
+  recordedAt     DateTime?     @default(now()) @map("recorded_at") @db.Timestamptz(6)
+  recordedBy     String?       @map("recorded_by") @db.Uuid
+  execution      Execution     @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  item           ChecklistItem @relation(fields: [itemId], references: [id])
+  recordedByUser Profile?      @relation("ExecutionResultRecordedBy", fields: [recordedBy], references: [id])
+
+  @@index([executionId], map: "idx_results_execution")
+  @@map("execution_results")
+  @@schema("public")
+}
+
+model Finding {
+  id             String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId          String         @map("org_id") @db.Uuid
+  executionId    String?        @map("execution_id") @db.Uuid
+  machineId      String         @map("machine_id") @db.Uuid
+  itemId         String?        @map("item_id") @db.Uuid
+  reportedBy     String?        @map("reported_by") @db.Uuid
+  assignedTo     String?        @map("assigned_to") @db.Uuid
+  title          String         @db.Text
+  description    String?        @db.Text
+  severity       PriorityLevel? @default(medium)
+  status         String         @default("open") @db.Text
+  photos         String[]       @default([])
+  resolvedAt     DateTime?      @map("resolved_at") @db.Timestamptz(6)
+  resolutionNote String?        @map("resolution_note") @db.Text
+  createdAt      DateTime?      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  execution      Execution?     @relation(fields: [executionId], references: [id])
+  machine        Machine        @relation(fields: [machineId], references: [id])
+  item           ChecklistItem? @relation(fields: [itemId], references: [id])
+  reportedByUser Profile?       @relation("FindingReportedBy", fields: [reportedBy], references: [id])
+  assignedToUser Profile?       @relation("FindingAssignedTo", fields: [assignedTo], references: [id])
+
+  @@index([machineId], map: "idx_findings_machine")
+  @@index([status], map: "idx_findings_status")
+  @@map("findings")
+  @@schema("public")
+}
+
+model AuditLog {
+  id           String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  orgId        String?              @map("org_id") @db.Uuid
+  userId       String?              @map("user_id") @db.Uuid
+  action       String               @db.Text
+  entityType   String?              @map("entity_type") @db.Text
+  entityId     String?              @map("entity_id") @db.Uuid
+  oldData      Json?                @map("old_data")
+  newData      Json?                @map("new_data")
+  ipAddress    Unsupported("inet")? @map("ip_address")
+  createdAt    DateTime?            @default(now()) @map("created_at") @db.Timestamptz(6)
+  organization Organization?        @relation(fields: [orgId], references: [id])
+  user         Profile?             @relation("AuditLogUser", fields: [userId], references: [id])
+
+  @@index([orgId, createdAt(sort: Desc)], map: "idx_audit_org")
+  @@map("audit_log")
+  @@schema("public")
+}

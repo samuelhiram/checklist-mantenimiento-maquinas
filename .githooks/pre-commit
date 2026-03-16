@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+echo "[hooks] Running lint before commit"
+npm run lint
