@@ -75,7 +75,8 @@ export function ChecklistsListScreen() {
   return (
     <ScreenPage>
       <ScreenHeader
-        title="Checklists"
+        size="lg"
+        title="Plantillas de Checklist"
         description={`${checklists.length} plantillas configuradas`}
         icon={ClipboardList}
         accentClassName="text-violet-400"

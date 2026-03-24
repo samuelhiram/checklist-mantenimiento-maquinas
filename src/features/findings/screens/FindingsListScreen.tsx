@@ -66,7 +66,8 @@ export function FindingsListScreen() {
   return (
     <ScreenPage>
       <ScreenHeader
-        title="Hallazgos"
+        size="lg"
+        title="Hallazgos y No Conformidades"
         description={`${findings.length} hallazgos registrados`}
         icon={AlertTriangle}
         accentClassName="text-amber-400"

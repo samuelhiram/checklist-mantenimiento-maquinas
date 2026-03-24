@@ -8,6 +8,62 @@ function repeat(count: number): number[] {
   return Array.from({ length: count }, (_, index) => index)
 }
 
+export function SkeletonScreen({
+  children,
+  className,
+  maxWidth = 'max-w-7xl',
+}: {
+  children: ReactNode
+  className?: string
+  maxWidth?: string | null
+}) {
+  return (
+    <section
+      aria-busy="true"
+      aria-live="polite"
+      className={clsx('min-h-full w-full bg-grid p-6', className)}
+      role="status"
+    >
+      <div className={clsx('w-full space-y-5', maxWidth, maxWidth && 'mx-auto')}>
+        {children}
+      </div>
+    </section>
+  )
+}
+
+export function SkeletonIntro({
+  title,
+  description,
+  showActions = true,
+  className,
+}: {
+  title: string
+  description: string
+  showActions?: boolean
+  className?: string
+}) {
+  return (
+    <div className={clsx('flex flex-col gap-3 animate-in sm:flex-row sm:items-start sm:justify-between', className)}>
+      <div className="space-y-2">
+        <div className="inline-flex items-center gap-2 rounded-full border border-accent-cyan/20 bg-accent-cyan/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-cyan/35" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-cyan" />
+          </span>
+          {title}
+        </div>
+        <p className="max-w-2xl text-sm text-slate-500">{description}</p>
+      </div>
+      {showActions ? (
+        <div className="hidden flex-shrink-0 items-center gap-2 lg:flex">
+          <SkeletonPill className="w-20" />
+          <SkeletonPill className="w-28" />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function SkeletonBlock({
   className,
 }: {

@@ -4,6 +4,15 @@
 
 import { MachinesListScreen } from '@/features/machines/screens/MachinesListScreen'
 
-export default function Page() {
-  return <MachinesListScreen />
+export default function Page({
+  searchParams,
+}: {
+  searchParams?: {
+    search?: string
+    status?: string
+    type?: string
+    priority?: string
+  }
+}) {
+  return <MachinesListScreen searchParams={searchParams} />
 }

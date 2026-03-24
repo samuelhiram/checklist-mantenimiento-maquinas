@@ -6,8 +6,8 @@
 import { useFormStatus } from 'react-dom'
 import { AsyncButton, type AsyncButtonProps } from './AsyncButton'
 
-export function FormSubmitButton(props: Omit<AsyncButtonProps, 'loading'>) {
+export function FormSubmitButton({ type = 'submit', ...props }: Omit<AsyncButtonProps, 'loading'>) {
   const { pending } = useFormStatus()
 
-  return <AsyncButton {...props} loading={pending} />
+  return <AsyncButton {...props} type={type} loading={pending} />
 }

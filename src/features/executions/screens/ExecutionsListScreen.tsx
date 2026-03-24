@@ -96,7 +96,8 @@ export function ExecutionsListScreen() {
   return (
     <ScreenPage>
       <ScreenHeader
-        title="Ejecuciones"
+        size="lg"
+        title="Control de Ejecuciones"
         description={`${counts.total} ejecuciones registradas`}
         icon={PlayCircle}
         accentClassName="text-cyan-400"

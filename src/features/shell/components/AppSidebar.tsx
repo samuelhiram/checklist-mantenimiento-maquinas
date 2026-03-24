@@ -96,12 +96,11 @@ export function AppSidebar() {
               key={item.href}
               href={item.href}
               trackingLabel={`Navegando a ${item.label}`}
-              showPendingSpinner
               pendingClassName="ring-1 ring-cyan-400/30"
               className={clsx(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150',
                 active
-                  ? 'border border-accent-cyan/20 bg-accent-cyan/10 text-accent-cyan'
+                  ? 'bg-accent-cyan/10 text-accent-cyan'
                   : 'text-slate-400 hover:bg-surface-200 hover:text-slate-200'
               )}
             >

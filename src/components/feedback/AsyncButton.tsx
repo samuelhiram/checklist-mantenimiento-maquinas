@@ -5,12 +5,11 @@
 
 import clsx from 'clsx'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
-import { LoadingSpinner } from './LoadingSpinner'
 
 export interface AsyncButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean
   loadingLabel?: ReactNode
-  spinnerClassName?: string
+  trackingLabel?: string
 }
 
 export function AsyncButton({
@@ -19,7 +18,7 @@ export function AsyncButton({
   disabled,
   loading = false,
   loadingLabel,
-  spinnerClassName,
+  trackingLabel: _,
   type = 'button',
   ...props
 }: AsyncButtonProps) {
@@ -30,14 +29,13 @@ export function AsyncButton({
       disabled={disabled || loading}
       aria-busy={loading}
       data-loading={loading ? 'true' : 'false'}
-      className={clsx(className, (disabled || loading) && 'cursor-not-allowed', loading && 'opacity-80')}
+      className={clsx(
+        className, 
+        (disabled || loading) && 'cursor-not-allowed', 
+        loading && 'opacity-50 select-none'
+      )}
     >
-      {loading ? (
-        <>
-          <LoadingSpinner className={spinnerClassName} />
-          <span>{loadingLabel ?? children}</span>
-        </>
-      ) : children}
+      {loading ? (loadingLabel ?? children) : children}
     </button>
   )
 }

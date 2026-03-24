@@ -1,30 +1,41 @@
-// Route: /machines/new
-// Access: supervisor | admin
-// Purpose: keep the creation route available while the machine form workflow is completed.
-
-import { Cpu, Search } from 'lucide-react'
+import { Cpu, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { RoutePlaceholder } from '@/components/screen/RoutePlaceholder'
+import { ScreenHeader } from '@/components/screen/ScreenHeader'
+import { ScreenPage } from '@/components/screen/ScreenPage'
 import { ROUTE_PATHS } from '@/features/navigation/routes'
 import { requireMachineCreateAccess } from '@/lib/auth/authorization-guards'
+import { MachineCreateForm } from '../components/MachineCreateForm'
+import { MachineCreationGuide } from '../components/MachineCreationGuide'
 
 export async function MachineCreateScreen() {
   await requireMachineCreateAccess()
 
   return (
-    <RoutePlaceholder
-      title="Nueva maquina"
-      description="Alta de maquinas, procesos y servicios."
-      backHref={ROUTE_PATHS.machines.list}
-      backLabel="Volver a maquinas"
-      icon={Cpu}
-      note="La ruta ya esta registrada y lista para crecer sin romper la navegacion. El siguiente paso natural es conectar un formulario server-first con Prisma."
-      action={
-        <Link href={ROUTE_PATHS.machines.list} className="btn-primary">
-          <Search className="h-4 w-4" />
-          Revisar catalogo
-        </Link>
-      }
-    />
+    <ScreenPage>
+      <div className="space-y-6">
+        <ScreenHeader
+          size="sm"
+          title="Nueva Maquina"
+          description="Registra un nuevo equipo o proceso en el sistema"
+          icon={Cpu}
+          accentClassName="text-blue-400"
+          actions={
+            <Link href={ROUTE_PATHS.machines.list} className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Volver al listado
+            </Link>
+          }
+        />
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <MachineCreateForm />
+          </div>
+          <div className="lg:col-span-1">
+            <MachineCreationGuide />
+          </div>
+        </div>
+      </div>
+    </ScreenPage>
   )
 }

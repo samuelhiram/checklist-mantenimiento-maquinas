@@ -5,7 +5,6 @@
 
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
-import { LoadingSpinner } from '@/components/feedback/LoadingSpinner'
 import { useAsyncUi } from '@/components/feedback/AsyncUiProvider'
 import type { AuthenticatedProfile, UserRole } from '@/types'
 import { hasPermission } from '@/lib/auth/permission-profiles'
@@ -36,12 +35,12 @@ export function ProtectedRoutesMenu({ profile }: { profile?: AuthenticatedProfil
           </p>
           <p className="mt-1 flex min-h-[18px] items-center gap-1.5 text-[11px] text-slate-500">
             {isNavigating ? (
-              <>
-                <LoadingSpinner className="h-3 w-3 text-cyan-300" />
+              <span className="flex items-center gap-2 animate-pulse text-cyan-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
                 <span>
                   Navegando a <span className="font-mono text-slate-300">{pendingHref}</span>
                 </span>
-              </>
+              </span>
             ) : lastNavigation ? (
               <span>
                 Ultima navegacion: <span className="font-mono text-cyan-200">{lastNavigation.durationMs}ms</span> hacia{' '}
@@ -64,17 +63,16 @@ export function ProtectedRoutesMenu({ profile }: { profile?: AuthenticatedProfil
                 href={view.href}
                 trackNavigation={shouldTrackNavigation}
                 trackingLabel={`Navegando a ${view.label}`}
-                showPendingSpinner
                 pendingClassName="ring-1 ring-cyan-400/30"
                 className={clsx(
-                  'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors',
+                  'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors',
                   isActive
-                    ? 'border-cyan-400/40 bg-cyan-400/10 text-cyan-200'
+                    ? 'bg-cyan-400/10 text-cyan-200'
                     : profile && hasAccess
-                      ? 'border-surface-400 bg-surface-200 text-slate-300 hover:border-cyan-400/30 hover:text-cyan-200'
+                      ? 'bg-surface-200 text-slate-300 hover:text-cyan-200'
                       : profile
-                        ? 'border-amber-500/20 bg-amber-500/10 text-amber-300 hover:border-amber-400/30'
-                        : 'border-surface-400 bg-surface-200/90 text-slate-300 hover:border-cyan-400/30 hover:text-cyan-200'
+                        ? 'bg-amber-500/10 text-amber-300'
+                        : 'bg-surface-200/90 text-slate-300 hover:text-cyan-200'
                 )}
                 title={
                   profile
@@ -93,9 +91,8 @@ export function ProtectedRoutesMenu({ profile }: { profile?: AuthenticatedProfil
             href={ROUTE_PATHS.dev.authAdmin}
             trackNavigation={pathname !== ROUTE_PATHS.dev.login}
             trackingLabel="Navegando a Dev auth"
-            showPendingSpinner
             pendingClassName="ring-1 ring-violet-400/30"
-            className="inline-flex items-center gap-1.5 rounded-md border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-xs text-violet-200 transition-colors hover:border-violet-400/40"
+            className="inline-flex items-center gap-1.5 rounded-md bg-violet-500/10 px-2.5 py-1.5 text-xs text-violet-200 transition-colors hover:bg-violet-500/20"
             title="Acceso tecnico para gestionar usuarios de prueba"
           >
             Dev auth

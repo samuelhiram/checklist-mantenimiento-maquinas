@@ -1,5 +1,5 @@
-import { RouteLoadingScreen } from '@/components/feedback/RouteLoadingScreen'
+import { DashboardSkeleton } from '@/features/dashboard/components/DashboardSkeleton'
 
 export default function Loading() {
-  return <RouteLoadingScreen variant="dashboard" />
+  return <DashboardSkeleton />
 }

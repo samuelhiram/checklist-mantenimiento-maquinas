@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import clsx from 'clsx'
 import type { MouseEvent, ReactNode } from 'react'
-import { LoadingSpinner } from '@/components/feedback/LoadingSpinner'
 import { useAsyncUi } from '@/components/feedback/AsyncUiProvider'
 import { getCurrentNavigationHref, normalizeNavigationHref } from '../href-state'
 
@@ -21,8 +20,6 @@ export function TrackedLink({
   className,
   pendingClassName,
   trackingLabel,
-  showPendingSpinner = false,
-  pendingSpinnerClassName,
   onClick,
   trackNavigation = true,
   title,
@@ -32,8 +29,6 @@ export function TrackedLink({
   className?: string
   pendingClassName?: string
   trackingLabel?: string
-  showPendingSpinner?: boolean
-  pendingSpinnerClassName?: string
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void
   trackNavigation?: boolean
   title?: string
@@ -61,12 +56,9 @@ export function TrackedLink({
       onClick={handleClick}
       aria-busy={isPending}
       data-loading={isPending ? 'true' : 'false'}
-      className={clsx(className, isPending && pendingClassName)}
+      className={clsx(className, isPending && 'opacity-50 pointer-events-none select-none', isPending && pendingClassName)}
     >
       {children}
-      {isPending && showPendingSpinner ? (
-        <LoadingSpinner className={clsx('h-3 w-3 flex-shrink-0', pendingSpinnerClassName)} />
-      ) : null}
     </Link>
   )
 }

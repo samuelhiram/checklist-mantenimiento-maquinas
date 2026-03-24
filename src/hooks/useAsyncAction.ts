@@ -10,6 +10,7 @@ import type { AsyncStatus, Nullable } from '@/types'
 interface UseAsyncActionOptions {
   label?: string
   minimumPendingMs?: number
+  singleton?: boolean
 }
 
 function delay(ms: number) {
@@ -18,17 +19,27 @@ function delay(ms: number) {
 
 export function useAsyncAction(options: UseAsyncActionOptions = {}) {
   const { beginTask, endTask } = useAsyncUi()
+  const { singleton = true } = options
   const [status, setStatus] = useState<AsyncStatus>('idle')
   const [error, setError] = useState<Nullable<string>>(null)
   const activeRunCountRef = useRef(0)
   const latestRunIdRef = useRef(0)
+  const abortControllerRef = useRef<Nullable<AbortController>>(null)
+  
   const latestSettledRef = useRef<{
     runId: number
     status: Extract<AsyncStatus, 'success' | 'error'>
     error: Nullable<string>
   } | null>(null)
 
-  const run = useCallback(async <T,>(task: () => Promise<T>) => {
+  const run = useCallback(async <T,>(task: (signal: AbortSignal) => Promise<T>) => {
+    if (singleton && abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     const minimumPendingMs = options.minimumPendingMs ?? 0
     const startedAt = Date.now()
     const runId = ++latestRunIdRef.current
@@ -42,14 +53,24 @@ export function useAsyncAction(options: UseAsyncActionOptions = {}) {
     setError(null)
 
     try {
-      return await task()
+      const result = await task(controller.signal)
+      return result
     } catch (cause) {
+      if (cause instanceof Error && cause.name === 'AbortError') {
+        // Task was cancelled, we don't treat this as application error
+        return undefined as unknown as T
+      }
+      
       nextStatus = 'error'
       nextError = cause instanceof Error ? cause.message : 'Ocurrio un error inesperado'
       throw cause
     } finally {
       const remainingMs = minimumPendingMs - (Date.now() - startedAt)
       if (remainingMs > 0) await delay(remainingMs)
+
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null
+      }
 
       if (!latestSettledRef.current || runId >= latestSettledRef.current.runId) {
         latestSettledRef.current = {
@@ -66,7 +87,7 @@ export function useAsyncAction(options: UseAsyncActionOptions = {}) {
         setError(latestSettledRef.current.error)
       }
     }
-  }, [beginTask, endTask, options.label, options.minimumPendingMs])
+  }, [beginTask, endTask, options.label, options.minimumPendingMs, singleton])
 
   const reset = useCallback(() => {
     setStatus('idle')

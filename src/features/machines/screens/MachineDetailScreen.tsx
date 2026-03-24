@@ -1,26 +1,20 @@
-// Route: /machines/[id]
-// Access: operator | supervisor | admin
-// Purpose: render the machine detail flow from the machines feature instead of the route entrypoint.
-
-'use client'
-
 import Link from 'next/link'
 import clsx from 'clsx'
 import { Activity, AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, Clock, Cpu, PlayCircle, Plus, Settings, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useAuthState } from '@/components/ui/AuthProvider'
+import { getCurrentSession } from '@/lib/auth/session'
 import { ROUTE_PATHS } from '@/features/navigation/routes'
 import { getAppAccessSnapshot } from '@/lib/auth/authorization'
-import {
-  getDemoChecklistById,
-  getDemoMachineById,
-  listDemoChecklistsByMachine,
-  listDemoExecutionsByMachine,
-  listDemoFindingsByMachine,
-} from '@/lib/demo/queries'
-import type { ExecutionStatus, PriorityLevel } from '@/types'
+import type { Checklist, ExecutionStatus, Finding, PriorityLevel } from '@/types'
 import { MACHINE_TYPE_LABEL } from '../config'
+import { 
+  getMachineById, 
+  listChecklistsByMachine, 
+  listExecutionsByMachine, 
+  listFindingsByMachine,
+  type ExecutionWithChecklist
+} from '../queries'
 
 const PRIORITY_BADGE: Record<PriorityLevel, string> = {
   critical: 'badge-critical',
@@ -80,18 +74,13 @@ function ExecutionStatusIcon({ status }: { status: ExecutionStatus }) {
   return <Clock className="h-3.5 w-3.5 text-slate-400" />
 }
 
-export function MachineDetailScreen({ machineId }: { machineId: string }) {
-  const { user } = useAuthState()
-  const access = getAppAccessSnapshot(user)
-  const machine = getDemoMachineById(machineId)
-  const checklists = listDemoChecklistsByMachine(machineId)
-  const executions = listDemoExecutionsByMachine(machineId).slice(0, 8)
-  const findings = listDemoFindingsByMachine(machineId)
-  const machineAccess = access.machines
-  const checklistAccess = access.checklists
-  const executionAccess = access.executions
-  const findingAccess = access.findings
+export async function MachineDetailScreen({ machineId }: { machineId: string }) {
+  const session = await getCurrentSession()
+  if (!session?.org.id) return null
 
+  const orgId = session.org.id
+  const machine = await getMachineById(orgId, machineId)
+  
   if (!machine) {
     return (
       <div className="p-8 text-center text-slate-400">
@@ -103,6 +92,16 @@ export function MachineDetailScreen({ machineId }: { machineId: string }) {
       </div>
     )
   }
+
+  const access = getAppAccessSnapshot(session.profile)
+  const checklists = await listChecklistsByMachine(orgId, machineId)
+  const executions = await listExecutionsByMachine(orgId, machineId)
+  const findings = await listFindingsByMachine(orgId, machineId)
+  
+  const machineAccess = access.machines
+  const checklistAccess = access.checklists
+  const executionAccess = access.executions
+  const findingAccess = access.findings
 
   const specEntries = Object.entries(machine.specs)
 
@@ -228,7 +227,7 @@ export function MachineDetailScreen({ machineId }: { machineId: string }) {
           </div>
         ) : (
           <div className="divide-y divide-surface-300">
-            {checklists.map(checklist => (
+            {checklists.map((checklist: Checklist) => (
               <div key={checklist.id} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-surface-200">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -247,7 +246,7 @@ export function MachineDetailScreen({ machineId }: { machineId: string }) {
                     </span>
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
-                    <span>{checklist._item_count} items</span>
+                    <span>{checklist._item_count ?? 0} items</span>
                     <span>{checklist.estimated_min} min est.</span>
                     <span className="capitalize">
                       {checklist.frequency === 'daily'
@@ -295,8 +294,7 @@ export function MachineDetailScreen({ machineId }: { machineId: string }) {
             </Link>
           </div>
           <div className="divide-y divide-surface-300">
-            {executions.map(execution => {
-              const checklist = getDemoChecklistById(execution.checklist_id)
+            {executions.map((execution: ExecutionWithChecklist) => {
               return (
                 <Link
                   key={execution.id}
@@ -307,7 +305,7 @@ export function MachineDetailScreen({ machineId }: { machineId: string }) {
                     <ExecutionStatusIcon status={execution.status} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-200">{checklist?.name}</p>
+                    <p className="truncate text-sm font-medium text-slate-200">{execution.checklist?.name || 'Checklist'}</p>
                     <p className="mt-0.5 text-xs text-slate-500">
                       {execution.scheduled_at ? format(new Date(execution.scheduled_at), 'd MMM yyyy HH:mm', { locale: es }) : ''}
                     </p>
@@ -315,7 +313,7 @@ export function MachineDetailScreen({ machineId }: { machineId: string }) {
                   <div className="flex-shrink-0 text-right">
                     <span className={EXECUTION_STATUS_CLASS[execution.status]}>{EXECUTION_STATUS_LABEL[execution.status]}</span>
                     {execution.score !== undefined && execution.score !== null ? (
-                      <p className="mt-1 font-mono text-xs text-slate-500">{execution.score}%</p>
+                      <p className="mt-1 font-mono text-xs text-slate-500">{Number(execution.score)}%</p>
                     ) : null}
                   </div>
                 </Link>
@@ -334,7 +332,7 @@ export function MachineDetailScreen({ machineId }: { machineId: string }) {
             </h2>
           </div>
           <div className="divide-y divide-surface-300">
-            {findings.map(finding => (
+            {findings.map((finding: Finding) => (
               <Link
                 key={finding.id}
                 href={ROUTE_PATHS.findings.detail(finding.id)}

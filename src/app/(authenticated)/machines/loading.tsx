@@ -1,11 +1,5 @@
-import { RouteLoadingScreen } from '@/components/feedback/RouteLoadingScreen'
+import { MachinesListSkeleton } from '@/features/machines/components/MachinesListSkeleton'
 
 export default function Loading() {
-  return (
-    <RouteLoadingScreen
-      variant="list"
-      title="Cargando maquinas"
-      description="Preparando filtros, metricas y tarjetas del inventario operativo."
-    />
-  )
+  return <MachinesListSkeleton />
 }
