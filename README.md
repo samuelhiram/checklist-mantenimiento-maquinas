@@ -1,45 +1,50 @@
-# Máquinas Checklist App
+# Machine Maintenance Checklists
 
-Aplicación de gestión de checklists para mantenimiento de máquinas y equipos.
+> Checklist management for machine and equipment maintenance, built on Next.js and Prisma.
 
-## Quick Start
+A checklist application for tracking maintenance on machines and equipment: define checklist
+templates, run them against specific machines, and keep an auditable record of what was inspected,
+by whom and when.
 
-1.  **Instalar dependencias:**
-    ```bash
-    npm install
-    ```
+**Status:** Active · **Stack:** Next.js (App Router) + TypeScript + Prisma + PostgreSQL
 
-2.  **Configurar entorno:**
-    Copia `.env.local.example` a `.env.local` y configura las variables necesarias (Supabase/PostgreSQL).
+## Quick start
 
-3.  **Sincronizar base de datos y autorizaciones:**
-    ```bash
-    npx prisma migrate dev
-    npm run prisma:sync-authz
-    ```
+```bash
+npm install
 
-4.  **Iniciar en desarrollo:**
-    ```bash
-    npm run dev
-    ```
+cp .env.local.example .env.local     # set the Supabase / PostgreSQL connection
 
-## Scripts de Verificación
+npx prisma migrate dev
+npm run prisma:sync-authz
 
-Para mantener la calidad del código, utiliza los siguientes comandos:
+npm run dev
+```
 
--   `npm run verify`: Ejecuta lint, typecheck y pruebas unitarias (en paralelo).
--   `npm run lint`: Ejecuta el linter (ESLint) con reglas personalizadas del proyecto.
--   `npm run typecheck`: Valida los tipos de TypeScript utilizando `tsconfig.typecheck.json`.
--   `npm run test:ui`: Ejecuta las pruebas de integración de la interfaz y navegación.
+## Commands
 
-## Arquitectura
+| Command | What it does |
+|---|---|
+| `npm run dev` | Development server |
+| `npm run verify` | Lint + typecheck + unit tests, in parallel |
+| `npm run lint` | ESLint with the project's custom rules |
+| `npm run typecheck` | TypeScript via `tsconfig.typecheck.json` |
+| `npm run test:ui` | UI and navigation integration tests |
+| `npm run prisma:sync-authz` | Sync authorization rules into the database |
 
-El proyecto sigue una arquitectura modular basada en `features`:
+## Architecture
 
--   `src/app`: Entrypoints de Next.js (App Router). Las páginas son "thin" y delegan en screens.
--   `src/features`: Lógica de negocio y UI organizada por dominio (checklists, machines, etc.).
--   `src/components`: Componentes UI compartidos y primitivos.
--   `src/lib`: Infraestructura (Prisma, Auth, normalización de datos).
--   `src/types`: Definiciones de tipos del sistema y del dominio.
+Feature-first layout — business logic is grouped by domain rather than by technical layer.
 
-Para más detalles, consulta la carpeta `docs/`.
+```
+src/app/           Next.js App Router entrypoints; pages stay thin and delegate to screens
+src/features/      Business logic and UI by domain (checklists, machines, …)
+src/components/    Shared UI components and primitives
+src/lib/           Infrastructure: Prisma, auth, data normalization
+src/types/         System and domain type definitions
+docs/              Extended documentation
+```
+
+The rule that holds this together: **pages stay thin**. A route file resolves params and renders a
+screen from `src/features/`; it never holds business logic. That keeps each feature movable and
+testable without dragging the router along with it.
